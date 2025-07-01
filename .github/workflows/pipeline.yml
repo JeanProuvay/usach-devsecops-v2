@@ -41,8 +41,8 @@ jobs:
       - name: Ejecutar análisis SonarCloud
         run: |
           npx sonarqube-scanner \
-            -Dsonar.projectKey=${{ github.event.repository.name }} \
-            -Dsonar.organization=usach-devsecops-v2 \
+            -Dsonar.projectKey=usach-devsecops-v2 \
+            -Dsonar.organization=jeanprouvay \
             -Dsonar.sources=. \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
