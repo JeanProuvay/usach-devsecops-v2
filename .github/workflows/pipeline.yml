@@ -70,8 +70,19 @@ jobs:
     needs: SAST
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.17.0'
+
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Instalar dependencias (si no están instaladas)
+        run: npm install
+
+      - name: Compilar y empaquetar
+        run: npm run build
 
       - name: Dependency Check
         uses: dependency-check/Dependency-Check_Action@1.1.0
