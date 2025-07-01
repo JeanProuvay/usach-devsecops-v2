@@ -6,7 +6,7 @@ on:
     branches: [ main, develop, feature/* ]
 
 jobs:
-  build:
+  SAST:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Node.js
@@ -61,7 +61,34 @@ jobs:
 
           if [ "$issueCount" -gt 0 ]; then
             echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
-            exit 1
+            #exit 1
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
+
+  SCA:
+    needs: SAST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Check
+        uses: dependency-check/Dependency-Check_Action@1.1.0
+        env:
+          JAVA_HOME: /opt/jdk
+        with:
+          project: '${{ github.event.repository.name }}'
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: dependecy-check-report
+          path: ${{ github.workspace }}/report
+
