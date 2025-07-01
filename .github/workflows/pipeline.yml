@@ -50,11 +50,18 @@ jobs:
 
       - name: Validando resultado de SonarCloud
         run: |
-          issueValidate=$(curl -s -X GET -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/issues/search?branch=main&componentKeys=usach-devsecops-v2-&facets=severities' | jq '.facets[0].values[1].count')
-          if [ "$issueValidate" -gt 0 ]; then
-            echo "Existen problemas en el código, se detiene el pipeline"
-            #exit 1
+          projectKey="usach-devsecops-v2"
+          branchName="main"
+      
+          issueCount=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR" \
+            | jq '.total')
+
+          echo "Vulnerabilidades críticas/altas/medias encontradas: $issueCount"
+
+          if [ "$issueCount" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
+            exit 1
           else
-            echo "No existen problemas en el código, se continúa con el pipeline"
+            echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
-        
