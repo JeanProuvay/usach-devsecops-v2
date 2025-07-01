@@ -90,5 +90,5 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: dependecy-check-report
-          path: ${{ github.workspace }}/report
+          path: ${{ github.workspace }}/reports
 
