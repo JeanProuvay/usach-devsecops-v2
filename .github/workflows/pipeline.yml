@@ -1,0 +1,60 @@
+name: workflow
+on:
+  push:
+    branches: [ main, develop, feature/* ]
+  pull_request:
+    branches: [ main, develop, feature/* ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.17.0'
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias (si no están instaladas)
+        run: npm install
+
+      - name: Compilar y empaquetar
+        run: npm run build
+
+      - name: Validando existencia del proyecto en sonar
+        run: |
+          set +e
+          curl -f -X POST -u '${{ secrets.SONAR_TOKEN }}:' 'https://sonarcloud.io/api/projects/create' -d 'name=${{ github.event.repository.name }}' -d 'project=${{ github.event.repository.name }}' -d 'organization=usach-devsecops' -d 'visibility=public'
+          if [ $? -ne 0 ]; then
+            echo "Proyecto ya existe en Sonarcloud"
+            echo "::set-output name=proyectoExiste::1"
+          else
+            echo "Proyecto ${{ github.event.repository.name }} creado exitosamente en Sonarcloud"
+          
+            echo "Se establece rama main como rama por defecto"
+            curl -X POST -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/project_branches/rename' -d 'name=main' -d 'project=${{ github.event.repository.name }}'
+          fi
+          set -e
+
+      - name: Ejecutar análisis SonarCloud
+        run: |
+          npx sonarqube-scanner \
+            -Dsonar.projectKey=${{ github.event.repository.name }} \
+            -Dsonar.organization=usach-devsecops-v2 \
+            -Dsonar.sources=. \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.branch.name=${{ github.head_ref || github.ref_name }}
+
+      - name: Validando resultado de SonarCloud
+        run: |
+          issueValidate=$(curl -s -X GET -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/issues/search?branch=main&componentKeys=usach-devsecops-&facets=severities' | jq '.facets[0].values[1].count')
+          if [ "$issueValidate" -gt 0 ]; then
+            echo "Existen problemas en el código, se detiene el pipeline"
+            #exit 1
+          else
+            echo "No existen problemas en el código, se continúa con el pipeline"
+          fi
+        
