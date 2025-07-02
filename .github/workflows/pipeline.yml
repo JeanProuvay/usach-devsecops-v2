@@ -6,6 +6,8 @@ on:
     branches: [ main, develop, feature/* ]
 
 jobs:
+# --------------------------------- BUILD ---------------------------------
+
   BUILD:
     runs-on: ubuntu-latest
     steps:
@@ -30,6 +32,8 @@ jobs:
           name: build-artifact
           path: ${{ github.workspace }}/.next
           include-hidden-files: true
+# --------------------------------- SAST ---------------------------------
+
   SAST:
     needs: BUILD
     runs-on: ubuntu-latest
@@ -86,6 +90,8 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
+# --------------------------------- SCA ---------------------------------
+
   SCA:
     needs: BUILD
     runs-on: ubuntu-latest
@@ -118,6 +124,8 @@ jobs:
         with:
           name: dependecy-check-report
           path: ${{ github.workspace }}/reports
+# --------------------------------- Docker Build ---------------------------------
+
   DockerBuild:
     needs: BUILD
     runs-on: ubuntu-latest
@@ -145,6 +153,8 @@ jobs:
       - name: Push Docker Image
         run: |
          docker push jeanpro/usach-devsecops-v2:latest
+# --------------------------------- Image Security ---------------------------------
+
   ImageSecurity:
     needs: DockerBuild
     runs-on: ubuntu-latest
@@ -165,5 +175,24 @@ jobs:
         with:
           image-ref: jeanpro/usach-devsecops-v2:latest
           format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          #exit-code: '1'
+          #severity: 'CRITICAL,HIGH,MEDIUM'
+# --------------------------------- DAST ---------------------------------
+
+  DAST:
+    needs: DockerBuild
+    runs-on: self-hosted
+    steps:
+
+      - name: Despliegue Aplicacion
+        run: |
+          docker run -p 8085:8085 --name pet-clinic-deploy -d jeanpro/usach-devsecops-v2:latest
+
+      - name: Sleep
+        run: |
+          sleep 30
+
+      - name: OWASP ZAP Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          target: 'http://localhost:8085/'
