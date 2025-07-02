@@ -87,7 +87,7 @@ jobs:
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
   SCA:
-    needs: SAST
+    needs: BUILD
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -119,7 +119,7 @@ jobs:
           name: dependecy-check-report
           path: ${{ github.workspace }}/reports
   DockerBuild:
-    needs: SCA
+    needs: BUILD
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -145,3 +145,27 @@ jobs:
       - name: Push Docker Image
         run: |
          docker push jeanpro/usach-devsecops-v2:latest
+  ImageSecurity:
+    needs: DockerBuild
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Docker Login
+        uses: docker/login-action@v3.0.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Docker Pull
+        run: |
+          docker pull jeanpro/usach-devsecops-v2:latest
+
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: jeanpro/usach-devsecops-v2:latest
+          format: 'table'
+
+      - name: Push Docker Image
+        run: |
+          docker push jeanpro/usach-devsecops-v2:latest
