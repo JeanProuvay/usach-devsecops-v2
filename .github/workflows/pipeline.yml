@@ -213,8 +213,29 @@ jobs:
       - name: Escaneo con OWASP ZAP
         run: |
           docker run --rm \
-            --network zap-net \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://reddit-clone-yt:3000/ \
-            -J report_json.json -w report_md.md -r report_html.html
+          --network zap-net \
+          -v ${{ github.workspace }}:/zap/wrk/:rw \
+          ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+          -t http://reddit-clone-yt:3000/ \
+          -J report_json.json -w report_md.md -r report_html.html \
+          -c
+
+      - name: Validar resultado de OWASP ZAP
+        run: |
+          if [ ! -f report_json.json ]; then
+            echo "No se encontró el archivo report_json.json. Falla el análisis DAST."
+            exit 1
+          fi
+
+          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' report_json.json)
+          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' report_json.json)
+
+          echo "Alertas High: $highAlerts"
+          echo "Alertas Medium: $mediumAlerts"
+
+          if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
+            exit 1
+          else
+            echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
+          fi
