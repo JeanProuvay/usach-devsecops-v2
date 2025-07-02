@@ -147,7 +147,7 @@ jobs:
         run: |
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
-            --tag jeanpro/usach-devsecops-v2:latest
+            --tag jeanpro/usach-devsecops-v2:latest .
 
       #- name: Build Docker Image
       #  run: |
