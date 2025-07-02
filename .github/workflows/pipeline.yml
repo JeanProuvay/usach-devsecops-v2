@@ -181,41 +181,19 @@ jobs:
 
   DAST:
     needs: DockerBuild
-    #runs-on: self-hosted
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Crear red Docker
-        run: docker network create zap-net
-
-      - name: Desplegar aplicación
+      - name: Despliegue Aplicacion
         run: |
-          docker run -d --rm --network zap-net --name reddit-clone-yt -p 8085:8085 jeanpro/usach-devsecops-v2:latest
+          docker run -p 8085:8085 --name reddit-clone-yt -d jeanpro/usach-devsecops-v2:latest
 
-      - name: Esperar que la app esté disponible
+      - name: Sleep
         run: |
-          for i in {1..10}; do
-            if curl -s http://reddit-clone-yt:8085 > /dev/null; then
-              echo "La aplicación está lista."
-              exit 0
-            fi
-            echo "Esperando que la aplicación responda..."
-            sleep 5
-          done
-          echo "La aplicación no respondió a tiempo."
-          exit 1
+          sleep 60
 
-      - name: Escaneo OWASP ZAP (manual)
-        run: |
-          docker run --rm \
-            --network zap-net \
-            -v ${{ github.workspace }}:/zap/wrk/:rw \
-            ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://localhost:8085/ \
-            -J report_json.json -w report_md.md -r report_html.html
+      - name: OWASP ZAP Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          target: 'http://localhost:8085/'
 
-      #- name: Escaneo OWASP ZAP
-      #  uses: zaproxy/action-baseline@v0.11.0
-      #  with:
-      #    target: 'http://reddit-clone-yt:8085/'
-      #  env:
-      #    DOCKER_NETWORK: zap-net
+
