@@ -166,4 +166,4 @@ jobs:
           image-ref: jeanpro/usach-devsecops-v2:latest
           format: 'table'
           exit-code: '1'
-          severity: 'CRITICAL, HIGH, MEDIUM'
+          severity: 'CRITICAL,HIGH,MEDIUM'
