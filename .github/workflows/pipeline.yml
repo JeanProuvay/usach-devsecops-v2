@@ -263,3 +263,11 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
           fi
+# --------------------------------- DAST ---------------------------------
+
+  DEPLOY:
+    needs: [ ImageSecurity, DAST, SCA, SAST ]
+    runs-on: self-hosted
+    steps:
+      - name: Desplegar aplicación
+        run: echo "Desplegando app en ambiente..."
