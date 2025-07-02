@@ -186,7 +186,7 @@ jobs:
 
       - name: Despliegue Aplicacion
         run: |
-          docker run -p 8085:8085 --name pet-clinic-deploy -d jeanpro/usach-devsecops-v2:latest
+          docker run -p 8085:8085 --name reddit-clone-yt -d jeanpro/usach-devsecops-v2:latest
 
       - name: Sleep
         run: |
