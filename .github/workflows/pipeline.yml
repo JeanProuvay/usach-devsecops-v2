@@ -209,7 +209,7 @@ jobs:
             --network zap-net \
             -v ${{ github.workspace }}:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://reddit-clone-yt:8085/ \
+            -t http://localhost:8085/ \
             -J report_json.json -w report_md.md -r report_html.html
 
       #- name: Escaneo OWASP ZAP
