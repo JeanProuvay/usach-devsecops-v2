@@ -183,6 +183,8 @@ jobs:
     needs: DockerBuild
     runs-on: self-hosted
     steps:
+      - name: Crear red Docker
+        run: docker network create zap-net
 
       - name: Desplegar aplicación
         run: |
@@ -195,7 +197,7 @@ jobs:
       - name: Escaneo OWASP ZAP
         uses: zaproxy/action-baseline@v0.11.0
         with:
-          target: 'http://localhost:8085/'
+          target: 'http://reddit-clone-yt:8085/'
         env:
           DOCKER_NETWORK: zap-net
 
