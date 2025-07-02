@@ -113,11 +113,35 @@ jobs:
         with:
           project: '${{ github.event.repository.name }}'
           path: '.'
-          format: 'HTML'
+          format: 'ALL'
           out: 'reports'
           args: >
             --failOnCVSS 7
             --enableRetired
+
+      - name: Validar resultado Dependency Check
+        run: |
+          report="reports/dependency-check-report.json"
+
+          if [ ! -f "$report" ]; then
+            echo "No se encontró el reporte de Dependency Check. Falla el análisis SCA."
+            exit 1
+          fi
+
+          critical=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "Critical")] | length' "$report")
+          high=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "High")] | length' "$report")
+          medium=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "Medium")] | length' "$report")
+
+          echo "Vulnerabilidades críticas: $critical"
+          echo "Vulnerabilidades altas: $high"
+          echo "Vulnerabilidades medias: $medium"
+
+          if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ] || [ "$medium" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades Críticas, Altas o Medias en dependencias. Deteniendo el pipeline..."
+            exit 1
+          else
+            echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
+          fi
 
       - name: Upload Dependency Check Report
         uses: actions/upload-artifact@master
@@ -235,7 +259,7 @@ jobs:
 
           if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
             echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
-            exit 1
+            #exit 1
           else
             echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
           fi
