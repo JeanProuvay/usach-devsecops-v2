@@ -184,8 +184,8 @@ jobs:
     #runs-on: self-hosted
     runs-on: ubuntu-latest
     steps:
-      #- name: Crear red Docker
-      #  run: docker network create zap-net
+      - name: Crear red Docker
+        run: docker network create zap-net
 
       - name: Desplegar aplicación
         run: |
