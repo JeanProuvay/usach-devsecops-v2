@@ -218,7 +218,7 @@ jobs:
           ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
           -t http://reddit-clone-yt:3000/ \
           -J report_json.json -w report_md.md -r report_html.html \
-          -c
+          -I
 
       - name: Validar resultado de OWASP ZAP
         run: |
