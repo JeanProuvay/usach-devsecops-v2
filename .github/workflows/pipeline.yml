@@ -23,13 +23,12 @@ jobs:
       - name: Compilar y empaquetar
         run: |
           npm run build
-          npm run export
 
       - name: Upload build output
         uses: actions/upload-artifact@master
         with:
           name: build-artifact
-          path: ${{ github.workspace }}/out
+          path: ${{ github.workspace }}/.next
 
   SAST:
     needs: BUILD
