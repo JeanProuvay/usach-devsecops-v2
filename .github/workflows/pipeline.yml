@@ -200,7 +200,7 @@ jobs:
       - name: Esperar que la aplicación esté lista
         run: |
           for i in {1..12}; do
-            if curl -s http://reddit-clone-yt:8085 > /dev/null; then
+            if curl -s http://reddit-clone-yt:3000 > /dev/null; then
               echo "La aplicación está lista."
               exit 0
             fi
@@ -216,6 +216,6 @@ jobs:
             --network zap-net \
             -v ${{ github.workspace }}:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://reddit-clone-yt:8085/ \
+            -t http://reddit-clone-yt:3000/ \
             -J report_json.json -w report_md.md -r report_html.html
 
