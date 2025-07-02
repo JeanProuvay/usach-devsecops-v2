@@ -184,7 +184,9 @@ jobs:
     runs-on: self-hosted
     steps:
       - name: Crear red Docker
-        run: docker network create zap-net
+        run: |
+          docker network rm zap-net || true
+          docker network create zap-net
 
       - name: Desplegar aplicación
         run: |
