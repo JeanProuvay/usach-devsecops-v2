@@ -6,7 +6,7 @@ on:
     branches: [ main, develop, feature/* ]
 
 jobs:
-  SAST:
+  BUILD:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Node.js
@@ -22,6 +22,39 @@ jobs:
 
       - name: Compilar y empaquetar
         run: npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/build
+
+  SAST:
+    needs: BUILD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download JAR
+        uses: actions/download-artifact@master
+        with:
+          name: JAR
+          path: ${{github.workspace}}
+
+      #- name: Set up Node.js
+      #  uses: actions/setup-node@v4
+      #  with:
+      #    node-version: '22.17.0'
+
+      #- name: Checkout code
+      #  uses: actions/checkout@v4
+
+      #- name: Instalar dependencias (si no están instaladas)
+      #  run: npm install
+
+      #- name: Compilar y empaquetar
+      #  run: npm run build
 
       - name: Validando existencia del proyecto en sonar
         run: |
