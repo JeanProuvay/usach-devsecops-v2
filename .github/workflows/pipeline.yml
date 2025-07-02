@@ -216,6 +216,5 @@ jobs:
             --network zap-net \
             -v ${{ github.workspace }}:/zap/wrk/:rw \
             ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
-            -t http://localhost:3000/ \
+            -t http://reddit-clone-yt:3000/ \
             -J report_json.json -w report_md.md -r report_html.html
-
