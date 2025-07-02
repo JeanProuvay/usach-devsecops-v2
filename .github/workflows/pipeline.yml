@@ -190,9 +190,18 @@ jobs:
         run: |
           docker run -d --rm --network zap-net --name reddit-clone-yt -p 8085:8085 jeanpro/usach-devsecops-v2:latest
 
-      - name: Sleep
+      - name: Esperar que la app esté disponible
         run: |
-          sleep 30
+          for i in {1..10}; do
+            if curl -s http://reddit-clone-yt:8085 > /dev/null; then
+              echo "La aplicación está lista."
+              exit 0
+            fi
+            echo "Esperando que la aplicación responda..."
+            sleep 5
+          done
+          echo "La aplicación no respondió a tiempo."
+          exit 1
 
       - name: Escaneo OWASP ZAP (manual)
         run: |
