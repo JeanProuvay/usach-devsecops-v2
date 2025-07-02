@@ -140,9 +140,18 @@ jobs:
           path: ${{ github.workspace }}/.next
           include-hidden-files: true
 
-      - name: Build Docker Image
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Multi-Arch Image
         run: |
-          docker build --tag jeanpro/usach-devsecops-v2:latest .
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag jeanpro/usach-devsecops-v2:latest
+
+      #- name: Build Docker Image
+      #  run: |
+      #    docker build --tag jeanpro/usach-devsecops-v2:latest .
 
       - name: Docker Login
         uses: docker/login-action@v3.0.0
