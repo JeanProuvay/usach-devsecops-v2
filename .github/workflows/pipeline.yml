@@ -138,7 +138,7 @@ jobs:
 
           if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ] || [ "$medium" -gt 0 ]; then
             echo "Se encontraron vulnerabilidades Críticas, Altas o Medias en dependencias. Deteniendo el pipeline..."
-            exit 1
+            #exit 1
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
@@ -199,8 +199,8 @@ jobs:
         with:
           image-ref: jeanpro/usach-devsecops-v2:latest
           format: 'table'
-          #exit-code: '1'
-          #severity: 'CRITICAL,HIGH,MEDIUM'
+          exit-code: '1'
+          severity: 'CRITICAL,HIGH,MEDIUM'
 # --------------------------------- DAST ---------------------------------
 
   DAST:
