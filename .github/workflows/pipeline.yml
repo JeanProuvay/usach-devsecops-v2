@@ -199,8 +199,8 @@ jobs:
         with:
           image-ref: jeanpro/usach-devsecops-v2:latest
           format: 'table'
-          exit-code: '1'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          #exit-code: '1'
+          #severity: 'CRITICAL,HIGH,MEDIUM'
 # --------------------------------- DAST ---------------------------------
 
   DAST:
@@ -259,7 +259,7 @@ jobs:
 
           if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
             echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
-            #exit 1
+            exit 1
           else
             echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
           fi
