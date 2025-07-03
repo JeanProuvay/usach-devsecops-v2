@@ -119,6 +119,12 @@ jobs:
             --failOnCVSS 7
             --enableRetired
 
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@master
+        with:
+          name: dependecy-check-report
+          path: ${{ github.workspace }}/reports
+
       - name: Validar resultado Dependency Check
         run: |
           report="reports/dependency-check-report.json"
@@ -142,12 +148,6 @@ jobs:
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
-
-      - name: Upload Dependency Check Report
-        uses: actions/upload-artifact@master
-        with:
-          name: dependecy-check-report
-          path: ${{ github.workspace }}/reports
 # --------------------------------- Docker Build ---------------------------------
 
   DockerBuild:
