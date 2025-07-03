@@ -86,7 +86,7 @@ jobs:
 
           if [ "$issueCount" -gt 0 ]; then
             echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
-            #exit 1
+            exit 1
           else
             echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
