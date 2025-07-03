@@ -244,6 +244,13 @@ jobs:
           -J report_json.json -w report_md.md -r report_html.html \
           -I
 
+      - name: Mover reportes de ZAP al directorio reports
+        run: |
+          mkdir -p reports
+          mv report_*.json reports/ || true
+          mv report_*.md reports/ || true
+          mv report_*.html reports/ || true
+
       - name: Upload OWASP ZAP Report
         uses: actions/upload-artifact@master
         with:
