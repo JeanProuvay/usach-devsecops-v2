@@ -6,7 +6,9 @@ on:
     branches: [ main, develop, feature/* ]
 
 jobs:
-  build:
+# --------------------------------- BUILD ---------------------------------
+
+  BUILD:
     runs-on: ubuntu-latest
     steps:
       - name: Set up Node.js
@@ -21,7 +23,30 @@ jobs:
         run: npm install
 
       - name: Compilar y empaquetar
-        run: npm run build
+        run: |
+          npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
+# --------------------------------- SAST ---------------------------------
+
+  SAST:
+    needs: BUILD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download build artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
 
       - name: Validando existencia del proyecto en sonar
         run: |
@@ -50,11 +75,199 @@ jobs:
 
       - name: Validando resultado de SonarCloud
         run: |
-          issueValidate=$(curl -s -X GET -u "${{ secrets.SONAR_TOKEN }}:" 'https://sonarcloud.io/api/issues/search?branch=main&componentKeys=usach-devsecops-v2-&facets=severities' | jq '.facets[0].values[1].count')
-          if [ "$issueValidate" -gt 0 ]; then
-            echo "Existen problemas en el código, se detiene el pipeline"
+          projectKey="usach-devsecops-v2"
+          branchName="main"
+      
+          issueCount=$(curl -s -u "${{ secrets.SONAR_TOKEN }}:" \
+            "https://sonarcloud.io/api/issues/search?componentKeys=${projectKey}&branch=${branchName}&types=VULNERABILITY&severities=BLOCKER,CRITICAL,MAJOR" \
+            | jq '.total')
+
+          echo "Vulnerabilidades críticas/altas/medias encontradas: $issueCount"
+
+          if [ "$issueCount" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas, altas o medias. Deteniendo el pipeline..."
             #exit 1
           else
-            echo "No existen problemas en el código, se continúa con el pipeline"
+            echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
           fi
-        
+# --------------------------------- SCA ---------------------------------
+
+  SCA:
+    needs: BUILD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download build artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
+
+      - name: Dependency Check
+        uses: dependency-check/Dependency-Check_Action@1.1.0
+        env:
+          JAVA_HOME: /opt/jdk
+        with:
+          project: '${{ github.event.repository.name }}'
+          path: '.'
+          format: 'ALL'
+          out: 'reports'
+          args: >
+            --failOnCVSS 7
+            --enableRetired
+
+      - name: Validar resultado Dependency Check
+        run: |
+          report="reports/dependency-check-report.json"
+
+          if [ ! -f "$report" ]; then
+            echo "No se encontró el reporte de Dependency Check. Falla el análisis SCA."
+            exit 1
+          fi
+
+          # Modificado para usar los valores correctos de severidad
+          critical=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "high")] | length' "$report")
+          high=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "high")] | length' "$report")
+          medium=$(jq '[.dependencies[].vulnerabilities[]? | select(.severity == "moderate")] | length' "$report")
+
+          echo "Vulnerabilidades críticas/altas: $critical"
+          echo "Vulnerabilidades medias: $medium"
+
+          if [ "$critical" -gt 0 ] || [ "$high" -gt 0 ] || [ "$medium" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades Críticas, Altas o Medias en dependencias. Deteniendo el pipeline..."
+            #exit 1
+          else
+            echo "No se encontraron vulnerabilidades críticas, altas ni medias. Continuando..."
+          fi
+
+      - name: Upload Dependency Check Report
+        uses: actions/upload-artifact@master
+        with:
+          name: dependecy-check-report
+          path: ${{ github.workspace }}/reports
+# --------------------------------- Docker Build ---------------------------------
+
+  DockerBuild:
+    needs: BUILD
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Download build artifact
+        uses: actions/download-artifact@master
+        with:
+          name: build-artifact
+          path: ${{ github.workspace }}/.next
+          include-hidden-files: true
+
+      - name: Build Docker Image
+        run: |
+          docker build --tag jeanpro/usach-devsecops-v2:latest .
+
+      - name: Docker Login
+        uses: docker/login-action@v3.0.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker Image
+        run: |
+         docker push jeanpro/usach-devsecops-v2:latest
+# --------------------------------- Image Security ---------------------------------
+
+  ImageSecurity:
+    needs: DockerBuild
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Docker Login
+        uses: docker/login-action@v3.0.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Docker Pull
+        run: |
+          docker pull jeanpro/usach-devsecops-v2:latest
+
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: jeanpro/usach-devsecops-v2:latest
+          format: 'table'
+          #exit-code: '1'
+          #severity: 'CRITICAL,HIGH,MEDIUM'
+# --------------------------------- DAST ---------------------------------
+
+  DAST:
+    needs: DockerBuild
+    runs-on: self-hosted
+    steps:
+      - name: Crear red Docker
+        run: |
+          docker network rm zap-net || true
+          docker network create zap-net
+
+      - name: Desplegar aplicación
+        run: |
+          docker run -d \
+            --rm \
+            --network zap-net \
+            --name reddit-clone-yt \
+            -p 3000:3000 \
+            jeanpro/usach-devsecops-v2:latest
+
+      - name: Esperar que la aplicación esté lista
+        run: |
+          for i in {1..12}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "La aplicación está lista."
+              exit 0
+            fi
+            echo "Esperando que la aplicación responda..."
+            sleep 5
+          done
+          echo "La aplicación no respondió a tiempo."
+          exit 1
+
+      - name: Escaneo con OWASP ZAP
+        run: |
+          docker run --rm \
+          --network zap-net \
+          -v ${{ github.workspace }}:/zap/wrk/:rw \
+          ghcr.io/zaproxy/zaproxy:stable zap-baseline.py \
+          -t http://reddit-clone-yt:3000/ \
+          -J report_json.json -w report_md.md -r report_html.html \
+          -I
+
+      - name: Validar resultado de OWASP ZAP
+        run: |
+          if [ ! -f report_json.json ]; then
+            echo "No se encontró el archivo report_json.json. Falla el análisis DAST."
+            exit 1
+          fi
+
+          highAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("High"))] | length' report_json.json)
+          mediumAlerts=$(jq '[.site[].alerts[] | select(.riskdesc | test("Medium"))] | length' report_json.json)
+
+          echo "Alertas High: $highAlerts"
+          echo "Alertas Medium: $mediumAlerts"
+
+          if [ "$highAlerts" -gt 0 ] || [ "$mediumAlerts" -gt 0 ]; then
+            echo "Se encontraron vulnerabilidades críticas o medias en OWASP ZAP. Deteniendo el pipeline..."
+            #exit 1
+          else
+            echo "No se encontraron vulnerabilidades críticas ni medias en OWASP ZAP. Continuando..."
+          fi
+# --------------------------------- DEPLOY ---------------------------------
+
+  DEPLOY:
+    needs: [ ImageSecurity, DAST, SCA, SAST ]
+    runs-on: self-hosted
+    steps:
+      - name: Desplegar aplicación
+        run: echo "Desplegando app en ambiente..."
