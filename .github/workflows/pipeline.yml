@@ -244,6 +244,12 @@ jobs:
           -J report_json.json -w report_md.md -r report_html.html \
           -I
 
+      - name: Upload OWASP ZAP Report
+        uses: actions/upload-artifact@master
+        with:
+          name: owasp-zap-report
+          path: ${{ github.workspace }}/reports
+
       - name: Validar resultado de OWASP ZAP
         run: |
           if [ ! -f report_json.json ]; then
